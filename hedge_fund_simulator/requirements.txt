@@ -1,0 +1,58 @@
+# ═══════════════════════════════════════════════════════════
+# requirements.txt
+# Install all at once: pip install -r requirements.txt
+#
+# HOW TO ADD A NEW LIBRARY:
+# Just add the name on a new line below.
+# Group it under the relevant section comment.
+# ═══════════════════════════════════════════════════════════
+
+# ── Database ──────────────────────────────────────────────
+sqlalchemy
+mysql-connector-python
+
+# ── Data Collection ───────────────────────────────────────
+yfinance
+fredapi
+newsapi-python
+feedparser
+requests
+
+# ── Data Processing ───────────────────────────────────────
+pandas
+numpy
+
+# ── Technical Indicators ──────────────────────────────────
+ta
+
+# ── Sentiment & NLP ───────────────────────────────────────
+vaderSentiment
+
+# ── Environment & Config ──────────────────────────────────
+python-dotenv
+
+# ── ML Models (used in Google Colab + locally) ────────────
+scikit-learn
+xgboost
+lightgbm
+
+# ── Deep Learning (training on Colab, inference locally) ──
+tensorflow
+keras
+
+# ── Portfolio Optimization (added when we reach that phase)
+# scipy
+# cvxpy
+# PyPortfolioOpt
+
+# ── Backtesting (added when we reach that phase) ──────────
+# vectorbt
+
+# ── Dashboard (added when we reach that phase) ────────────
+# streamlit
+# plotly
+
+# ── Scheduling (added when we reach that phase) ───────────
+# apscheduler
+
+# ── ADD NEW LIBRARIES BELOW THIS LINE ─────────────────────

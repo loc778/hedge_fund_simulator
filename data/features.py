@@ -172,13 +172,13 @@ print(f"  ✅ Sentiment merged")
 print("  🔧 Merging macro data...")
 
 macro_cols = ["Date", "India_VIX", "USDINR", "Crude_Oil", "Gold",
-              "CPI_India", "GDP_India", "Fed_Funds_Rate",
+              "CPI_India", "Fed_Funds_Rate",
               "US_CPI", "US_10Y_Bond"]
 base = base.merge(macro[macro_cols], on="Date", how="left")
 
 # Forward fill macro for any missing trading days
 macro_feature_cols = ["India_VIX", "USDINR", "Crude_Oil", "Gold",
-                      "CPI_India", "GDP_India", "Fed_Funds_Rate",
+                      "CPI_India", "Fed_Funds_Rate",
                       "US_CPI", "US_10Y_Bond"]
 base[macro_feature_cols] = base[macro_feature_cols].ffill()
 print(f"  ✅ Macro merged")
@@ -213,7 +213,7 @@ col_order = [
     "Dividend_Yield", "EPS_Basic",
     "Sentiment_Score", "Positive_Score", "Negative_Score",
     "India_VIX", "USDINR", "Crude_Oil", "Gold",
-    "CPI_India", "GDP_India", "Fed_Funds_Rate",
+    "CPI_India", "Fed_Funds_Rate",
     "US_CPI", "US_10Y_Bond",
     "Target_Return_21d", "Target_Direction"
 ]

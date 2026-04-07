@@ -52,7 +52,7 @@ from data.db import get_engine
 # ─────────────────────────────────────────────
 MODEL_VERSION = "20260405"   # ← change this after each retraining session
 
-MODEL_DIR = os.path.join(PROJECT_ROOT, "models", "saved")
+MODEL_DIR = os.path.join(PROJECT_ROOT, "models")
 
 # ─────────────────────────────────────────────
 # CUSTOM CSS — dark finance theme
@@ -223,22 +223,36 @@ LOOKBACK = 60   # LSTM sequence length
 
 
 def detect_regime(models: dict, df: pd.DataFrame, latest_date) -> str:
-    """Runs HMM on latest Nifty/VIX features to detect current market regime."""
-    hmm_features = ['Nifty_Return', 'India_VIX', 'Return_5d']
-    available = [c for c in hmm_features if c in df.columns]
-    if len(available) < 2:
-        return "Sideways"   # safe fallback
-
-    recent = df[df['Date'] == latest_date][available].dropna()
+    """Runs HMM on latest features to detect current market regime."""
+    
+    # Check exactly how many features the scaler expects
+    n_expected = models['hmm_scaler'].n_features_in_
+    
+    # Try these candidates in order until we find enough
+    hmm_candidates = [
+        'Nifty_Return', 'India_VIX', 'Return_5d', 'Return_21d',
+        'Volatility_20d', 'Return_1d', 'RSI_14', 'MACD'
+    ]
+    
+    available = [c for c in hmm_candidates if c in df.columns]
+    
+    # If we can't match exactly what the scaler expects, fall back safely
+    if len(available) < n_expected:
+        return "Sideways"
+    
+    # Use exactly the number of features the scaler was trained on
+    use_cols = available[:n_expected]
+    
+    recent = df[df['Date'] == latest_date][use_cols].dropna()
     if recent.empty:
         return "Sideways"
-
-    X = models['hmm_scaler'].transform(recent.mean().values.reshape(1, -1))
-    regime_id = int(models['hmm'].predict(X)[0])
-    return REGIME_LABELS.get(regime_id, "Sideways")
-
-
-@st.cache_data(ttl=3600, show_spinner="Generating AI signals...")
+    
+    try:
+        X = models['hmm_scaler'].transform(recent.mean().values.reshape(1, -1))
+        regime_id = int(models['hmm'].predict(X)[0])
+        return REGIME_LABELS.get(regime_id, "Sideways")
+    except Exception:
+        return "Sideways"
 def generate_signals(_models_key: str, _df_hash: int) -> pd.DataFrame:
     """
     Runs ensemble inference on the latest available date.

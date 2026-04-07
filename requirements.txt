@@ -51,6 +51,13 @@ keras
 # ── Dashboard (added when we reach that phase) ────────────
 streamlit>=1.32.0
 plotly>=5.20.0
+joblib
+tensorflow
+xgboost
+lightgbm
+scikit-learn
+hmmlearn
+
 # ── Scheduling (added when we reach that phase) ───────────
 # apscheduler
 

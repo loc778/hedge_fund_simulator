@@ -129,87 +129,69 @@ COMPANY_NAMES = {
 # ── FinBERT via HuggingFace Inference API ─────────────────────────────
 def get_finbert_sentiment(headlines):
     """
-    Primary: FinBERT via HuggingFace API
-    Fallback: VADER (lightweight, runs locally, no RAM issues)
-    Automatically switches if HF API is unavailable.
+    Batched FinBERT — sends ALL headlines in ONE API call.
+    10x faster than one call per headline.
+    Falls back to VADER if HuggingFace unavailable.
     """
     if not headlines:
         return None
 
-    # ── Try HuggingFace FinBERT first ─────────────────────────────────
-    # NEW — correct endpoint
     API_URL = "https://router.huggingface.co/hf-inference/models/ProsusAI/finbert"
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
-    all_scores  = []
-    hf_failed   = False
+    # Limit to max headlines from config
+    batch = headlines[:SENTIMENT["max_headlines_per_stock"]]
 
-    for headline in headlines[:SENTIMENT["max_headlines_per_stock"]]:
-        try:
+    try:
+        # Send ALL headlines in ONE API call instead of one per headline
+        response = requests.post(
+            API_URL,
+            headers=headers,
+            json={"inputs": batch},
+            timeout=30
+        )
+
+        if response.status_code == 503:
+            print(f"    ⏳ Model warming up, waiting 20s...")
+            time.sleep(20)
             response = requests.post(
-                API_URL,
-                headers=headers,
-                json={"inputs": headline},
-                timeout=30          # Increased timeout
+                API_URL, headers=headers,
+                json={"inputs": batch}, timeout=30
             )
 
-            if response.status_code == 200:
-                result = response.json()
-                if result and isinstance(result[0], list):
-                    scores = {item["label"]: item["score"]
-                             for item in result[0]}
+        if response.status_code == 200:
+            results = response.json()
+
+            # Results is a list of lists — one inner list per headline
+            all_scores = []
+            for result in results:
+                if isinstance(result, list):
+                    scores = {item["label"]: item["score"] for item in result}
                     all_scores.append(scores)
 
-            elif response.status_code == 503:
-                # Model is loading — wait longer and retry
-                print(f"    ⏳ FinBERT warming up, waiting 20s...")
-                time.sleep(20)
-                response = requests.post(
-                    API_URL, headers=headers,
-                    json={"inputs": headline}, timeout=30
-                )
-                if response.status_code == 200:
-                    result = response.json()
-                    if result and isinstance(result[0], list):
-                        scores = {item["label"]: item["score"]
-                                 for item in result[0]}
-                        all_scores.append(scores)
-            else:
-                hf_failed = True
-                break
+            if all_scores:
+                avg_positive = sum(s.get("positive", 0) for s in all_scores) / len(all_scores)
+                avg_negative = sum(s.get("negative", 0) for s in all_scores) / len(all_scores)
+                avg_neutral  = sum(s.get("neutral",  0) for s in all_scores) / len(all_scores)
+                composite    = avg_positive - avg_negative
 
-        except Exception as e:
-            hf_failed = True
-            break
+                return {
+                    "Sentiment_Score": round(composite,    4),
+                    "Positive_Score":  round(avg_positive, 4),
+                    "Negative_Score":  round(avg_negative, 4),
+                    "Neutral_Score":   round(avg_neutral,  4),
+                    "Headlines_Count": len(all_scores)
+                }
 
-        time.sleep(0.5)
+    except Exception:
+        pass
 
-    # ── If HF worked, return results ──────────────────────────────────
-    if all_scores:
-        avg_positive = sum(s.get("positive", 0) for s in all_scores) / len(all_scores)
-        avg_negative = sum(s.get("negative", 0) for s in all_scores) / len(all_scores)
-        avg_neutral  = sum(s.get("neutral",  0) for s in all_scores) / len(all_scores)
-        composite    = avg_positive - avg_negative
-
-        return {
-            "Sentiment_Score": round(composite,    4),
-            "Positive_Score":  round(avg_positive, 4),
-            "Negative_Score":  round(avg_negative, 4),
-            "Neutral_Score":   round(avg_neutral,  4),
-            "Headlines_Count": len(all_scores)
-        }
-
-    # ── Fallback: VADER ───────────────────────────────────────────────
-    # Runs locally, no internet needed, no RAM issues
+    # ── VADER fallback ────────────────────────────────────────────────
     print(f"    ⚠️  HuggingFace unavailable — using VADER fallback")
     try:
         from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-        analyzer = SentimentIntensityAnalyzer()
-
-        vader_scores = []
-        for headline in headlines[:SENTIMENT["max_headlines_per_stock"]]:
-            score = analyzer.polarity_scores(headline)
-            vader_scores.append(score)
+        analyzer     = SentimentIntensityAnalyzer()
+        vader_scores = [analyzer.polarity_scores(h) for h in batch]
 
         if not vader_scores:
             return None
@@ -230,7 +212,6 @@ def get_finbert_sentiment(headlines):
     except Exception as e:
         print(f"    ❌ VADER also failed: {e}")
         return None
-
 
 # ── Source 1: NewsAPI ─────────────────────────────────────────────────
 def fetch_newsapi(company_name, days_back=3):
@@ -402,7 +383,7 @@ for ticker in TICKERS:
         print(f"  ❌ {ticker} — {e}")
         failed.append(ticker)
 
-    time.sleep(1)
+    time.sleep(0.3)
 
 # ── Save to MySQL ─────────────────────────────────────────────────────
 if all_data:

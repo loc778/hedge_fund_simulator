@@ -49,9 +49,8 @@ keras
 # vectorbt
 
 # ── Dashboard (added when we reach that phase) ────────────
-# streamlit
-# plotly
-
+streamlit>=1.32.0
+plotly>=5.20.0
 # ── Scheduling (added when we reach that phase) ───────────
 # apscheduler
 

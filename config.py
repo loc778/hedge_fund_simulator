@@ -22,6 +22,8 @@ BATCH_DELAY = 2
 # Pause between individual stock fetches (fundamentals)
 STOCK_DELAY = 1
 
+MODEL_VERSION = "20260405"   # add this near the top
+
 # ── Database ─────────────────────────────────────────────────────────
 DB_NAME = "hedge_fund_db"
 
@@ -164,3 +166,4 @@ ET_RSS_FEEDS = {
 }
 
 TABLES["sentiment"] = "nifty100_sentiment"
+
